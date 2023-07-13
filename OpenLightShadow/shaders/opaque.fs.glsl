@@ -1,4 +1,4 @@
-#version 330
+#version 430
 
 // il n'y a plus de variable predefinie en sortie: au revoir gl_FragColor
 // on peut appeler la variable comme on veut mais doit etre marquee 'out vec4'

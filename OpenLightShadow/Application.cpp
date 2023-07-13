@@ -115,6 +115,7 @@ void Application::render()
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
     glViewport(0, 0, m_width, m_height);
     glClearColor(0, 0, 0, 1.f);
+
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     glViewport(0, 0, m_width, m_height);

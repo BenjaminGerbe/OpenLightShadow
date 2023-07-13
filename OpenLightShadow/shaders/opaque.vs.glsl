@@ -1,4 +1,4 @@
-#version 330
+#version 450
 
 // role du Vertex Shader:
 // produire (au minimum) une position
