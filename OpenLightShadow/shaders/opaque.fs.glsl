@@ -5,6 +5,7 @@
 
 uniform sampler2D u_Sampler; // GL_TEXTURE0
 
+layout(location = 0) out vec3 color;
 out vec4 o_FragColor;
 
 in vec3 v_FragPosition; // dans le repere du monde
@@ -48,7 +49,7 @@ void main(void)
     }
 
 
-    vec4 L = u_WorldMatrix * (u_LightViewMatrix * vec4(0,0,0,1.0));
+    vec4 L = u_WorldMatrix * (u_LightProjectionMatrix*u_LightViewMatrix * vec4(0,0,0,1.0));
 
     // on peut egalement tester les valeurs xyz pour eviter 
     // l'influence de la bordure qui se repeterait
@@ -56,7 +57,7 @@ void main(void)
 
     float diffuse = clamp(dot(N,vec3(-normalize(L))),0.0,1.0);
 
-    o_FragColor = texture(u_Sampler, v_TexCoords)*diffuse;
+    o_FragColor = projColor * (texture(u_Sampler, v_TexCoords)*diffuse);
 
     // debug des normales
     //o_FragColor = vec4(v_Normal * 0.5 + 0.5, 1.0);

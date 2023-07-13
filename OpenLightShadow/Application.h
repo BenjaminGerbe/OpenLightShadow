@@ -11,6 +11,10 @@ struct Application
     int32_t m_height;
 
     GLShader m_opaqueShader;
+    GLShader m_RenderShader;
+
+    GLuint FBO;
+
 
     std::vector<Mesh> m_objects;
 

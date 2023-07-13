@@ -37,7 +37,7 @@ int main(void)
 
         app.setElapsedTime(glfwGetTime());
 
-        app.update();
+        //app.update();
         /* Render here */
         app.render();
 

@@ -21,7 +21,7 @@ bool Application::initialize()
     // 
 
     m_opaqueShader.LoadVertexShader("../../../../OpenLightShadow/shaders/opaque.vs.glsl");
-    m_opaqueShader.LoadFragmentShader("../../../../OpenLightShadow/shaders//opaque.fs.glsl");
+    m_opaqueShader.LoadFragmentShader("../../../../OpenLightShadow/shaders/opaque.fs.glsl");
     m_opaqueShader.Create();
 
     {
@@ -59,7 +59,7 @@ bool Application::initialize()
 
     // data pour le projecteur 
     {
-        m_projTextureID = Texture::LoadTexture("batman_logo.png");
+        //m_projTextureID = Texture::LoadTexture("batman_logo.png");
 
         glGenBuffers(1, &m_lightUBO);
         glBindBuffer(GL_UNIFORM_BUFFER, m_lightUBO);
@@ -73,6 +73,26 @@ bool Application::initialize()
         // de glBindBufferBase() lors de l'initialisation
         glUniformBlockBinding(program, MatBlockIndex, 1);
     }
+
+
+    glGenFramebuffers(1, &m_projTextureID);
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+
+
+    glGenTextures(1, &m_projTextureID);
+
+    // "Bind" the newly created texture : all future texture functions will modify this texture
+    glBindTexture(GL_TEXTURE_2D, m_projTextureID);
+
+    // Give an empty image to OpenGL ( the last "0" )
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_width, m_height, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+
+    // Poor filtering. Needed !
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, m_projTextureID, 0);
+
 
     return true;
 }
@@ -95,6 +115,11 @@ void Application::update()
 
 void Application::render()
 {
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+    glViewport(0, 0, m_width, m_height);
+    glClearColor(0.973f, 0.514f, 0.475f, 1.f);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
     glViewport(0, 0, m_width, m_height);
     glClearColor(0.973f, 0.514f, 0.475f, 1.f);
 
