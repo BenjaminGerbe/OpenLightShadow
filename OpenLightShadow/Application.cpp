@@ -36,8 +36,6 @@ bool Application::initialize()
 
     }
 
-
-
     uint32_t program = m_opaqueShader.GetProgram();
     for (Mesh& obj : m_objects) {
         obj.Setup(program);
@@ -75,7 +73,7 @@ bool Application::initialize()
     }
 
 
-    glGenFramebuffers(1, &m_projTextureID);
+    glGenFramebuffers(1, &FBO);
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
 
@@ -92,7 +90,6 @@ bool Application::initialize()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, m_projTextureID, 0);
-
 
     return true;
 }
@@ -117,7 +114,7 @@ void Application::render()
 {
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
     glViewport(0, 0, m_width, m_height);
-    glClearColor(0.973f, 0.514f, 0.475f, 1.f);
+    glClearColor(0, 0, 0, 1.f);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     glViewport(0, 0, m_width, m_height);
