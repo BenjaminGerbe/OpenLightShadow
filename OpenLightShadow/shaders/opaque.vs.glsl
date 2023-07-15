@@ -12,6 +12,7 @@ out vec2 v_TexCoords;
 out vec3 v_Normal;
 
 uniform mat4 u_WorldMatrix;
+uniform vec3 u_lightDirection;
 
 // un 'uniform block' pour nos matrices communes
 uniform Matrices {
@@ -25,6 +26,7 @@ uniform LightMatrices {
 };
 
 out vec4 v_ShadowCoords;
+out vec4 vertPosition;
 
 void main(void)
 {
@@ -52,7 +54,11 @@ void main(void)
 				, 0.0, 0.0, 0.5, 0.0
 				, 0.5, 0.5, 0.5, 1.0 // 4eme colonne (+0.5)
 	);
-	v_ShadowCoords = biasMatrix * light_ndc_position;
 
+
+
+	//v_ShadowCoords = biasMatrix * light_ndc_position;
+	v_ShadowCoords = biasMatrix*light_ndc_position;
+	vertPosition = u_ProjectionMatrix * u_ViewMatrix * position_world;
 	gl_Position = u_ProjectionMatrix * u_ViewMatrix * position_world;
 }

@@ -11,10 +11,18 @@ struct Application
     int32_t m_height;
 
     GLShader m_opaqueShader;
-    GLShader m_RenderShader;
+    GLShader m_FBOShader;
+    GLShader m_SkyBox;
 
     GLuint FBO;
+    float CameraAngle;
 
+    float* ColorSpecular;
+    float* ColorDiffuse;
+    float* ColorAmbiante;
+    float Roughness;
+    bool Metatlic;
+    float Reflectance;
 
     std::vector<Mesh> m_objects;
 
@@ -25,6 +33,7 @@ struct Application
 
     uint32_t m_lightUBO = 0;
     uint32_t m_projTextureID = 0;
+    uint32_t skyboxID;
 
     float m_elapsedTime = 0.f;
 
@@ -34,5 +43,6 @@ struct Application
     bool initialize();
     void deinitialize();
     void update();
-    void render();
+    void renderScene();
+    void render( uint32_t program);
 };

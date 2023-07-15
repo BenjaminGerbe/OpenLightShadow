@@ -24,10 +24,10 @@ link_directories(../libs/GLM/build/glm/Debug)
 include_directories(../libs/stb)
 
 include_directories(../libs/tinoy_obj_loader)
-
+add_subdirectory(imgui)
 
 include_directories(${PROJECT_SOURCE_DIR})
 add_executable (OpenLightShadow "Application.cpp" "Application.h" ${f_dir} "OLS.cpp" "OLS.h")
 
-target_link_libraries(OpenLightShadow  ${OPENGL_gl_LIBRARY} glm_static glfw3dll glew32s opengl32)
+target_link_libraries(OpenLightShadow  ${OPENGL_gl_LIBRARY} imgui glm_static glfw3dll glew32s opengl32)
 
