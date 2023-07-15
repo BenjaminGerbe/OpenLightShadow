@@ -12,9 +12,9 @@
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_opengl3.h"
-#include <vector>
+
 #include "stb_image.h"
-Mesh cube;
+
 bool Application::initialize()
 {
     GLenum error = glewInit();
@@ -34,15 +34,9 @@ bool Application::initialize()
     m_FBOShader.LoadFragmentShader("../../../../OpenLightShadow/shaders/RenderTexture.fs.glsl");
     m_FBOShader.Create();
 
-    m_SkyBox.LoadVertexShader("../../../../OpenLightShadow/shaders/Cube.vs.glsl");
-    m_SkyBox.LoadFragmentShader("../../../../OpenLightShadow/shaders/Cube.fs.glsl");
-    m_SkyBox.Create();
-
     {
         Mesh object;
         Mesh::ParseObj(&object, "data/lightning/lightning_obj.obj");
-
-        Mesh::ParseObj(&cube, "data/cube.obj");
 
         Mesh::ParseObj(&object, "data/Chess_Knights.obj");
         m_objects.push_back(object);
@@ -56,9 +50,6 @@ bool Application::initialize()
     for (Mesh& obj : m_objects) {
         obj.Setup(program);
     }
-
-     program = m_SkyBox.GetProgram();
-    cube.Setup(program);
 
     // UBO
     glGenBuffers(1, &m_UBO);
@@ -131,41 +122,6 @@ bool Application::initialize()
     Reflectance = 0;
 
 
-    // loadSkybox
-
- 
-    glGenTextures(1, &skyboxID);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxID);
-
-    int width, height, nrChannels;
-    unsigned char* data;
-
-    std::vector<std::string> faces
-    {
-            "right.jpg",
-            "left.jpg",
-            "top.jpg",
-            "bottom.jpg",
-            "front.jpg",
-            "back.jpg"
-    };
-
-    for (unsigned int i = 0; i < 6; i++)
-    {
-        data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
-        glTexImage2D(
-            GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
-            0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data
-        );
-    }
-
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-
     return true;
 }
 
@@ -230,10 +186,7 @@ void Application::renderScene()
          
     }
 
-    glActiveTexture(GL_TEXTURE0 + 2);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxID);
-    int32_t PROJTEXTURE = glGetUniformLocation(program, "u_Skybox");
-    glUniform1i(PROJTEXTURE, 2);
+
 
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
@@ -290,42 +243,6 @@ void Application::renderScene()
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glCullFace(GL_BACK);
     render(program);
-
-    glDepthMask(GL_FALSE);
-
-    program = m_SkyBox.GetProgram();
-
-    {
-
-        glm::vec3 up{ 0.0f, 1.f, 0.f };
-
-        glm::mat4 matrices[2];
-        glm::mat4 lightMatrices[2];
-
-        matrices[0] = glm::lookAt(light_position, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
-        matrices[1] = glm::ortho<float>(-35, 35, -35, 35, .01f, 75.0f);
-
-
-        glBindBuffer(GL_UNIFORM_BUFFER, m_UBO);
-        glBufferData(GL_UNIFORM_BUFFER, sizeof(glm::mat4) * 2, matrices, GL_STATIC_DRAW);
-
-        glActiveTexture(GL_TEXTURE0+2);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxID);
-        int32_t PROJTEXTURE = glGetUniformLocation(program, "skybox");
-        glUniform1i(PROJTEXTURE, 2);
-
-
-        for (auto& submesh : cube.meshes)
-        {
-            // bind implicitement les VBO et IBO rattaches, ainsi que les definitions d'attributs
-            glBindVertexArray(submesh.VAO);
-            // dessine les triangles
-            glDrawElements(GL_TRIANGLES, submesh.indicesCount, GL_UNSIGNED_INT, 0);
-
-        }
-
-    }
-    glDepthMask(GL_TRUE);
 }
 
 void Application::render( uint32_t program)
@@ -365,7 +282,7 @@ void Application::render( uint32_t program)
             const Material& mat = submesh.materialId > -1 ? obj.materials[submesh.materialId] : Material::defaultMaterial;
 
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, skyboxID);
+            glBindTexture(GL_TEXTURE_2D, mat.diffuseTexture);
 
             // bind implicitement les VBO et IBO rattaches, ainsi que les definitions d'attributs
             glBindVertexArray(submesh.VAO);
