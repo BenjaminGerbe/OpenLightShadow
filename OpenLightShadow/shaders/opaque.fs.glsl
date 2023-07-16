@@ -38,6 +38,8 @@ uniform Matrices {
 in vec4 v_ShadowCoords; // 
 in vec4 vertPosition;
 
+uniform samplerCube skybox;
+
 
 vec2 poissonDisk[4] = vec2[](
   vec2( -0.94201624, -0.39906216 ),
@@ -45,6 +47,8 @@ vec2 poissonDisk[4] = vec2[](
   vec2( -0.094184101, -0.92938870 ),
   vec2( 0.34495938, 0.29387760 )
 );
+
+
 
 void main(void)
 {
@@ -84,37 +88,44 @@ void main(void)
         }
     }
     
-    
-    //Blinn phong
-    vec3 V = -(vec3(  inverse(u_ProjectionMatrix*u_ViewMatrix) * vec4(0, 0, 1.0, 1.0)));
+
+
+
+    float Roughness = clamp(u_Roughness,0.001,1);
+    Roughness = Roughness*Roughness;
+    float Shininess = 2.0 / (Roughness * Roughness)-2.0;
+    float normalisation = ((Shininess + 8.0) / 8.0);
+    vec3 V = -(vec3(inverse(u_ProjectionMatrix * u_ViewMatrix) * vec4(0, 0, 1.0, 1.0)));
+    vec3 H = normalize(V + L);
+    float NdotH = clamp(dot(N, H), 0, 1);
+    float NdotV = clamp(dot(N, V), 0, 1);
+
  
-    vec3 H = normalize(V+L);
-    float NdotH = clamp((dot(N,H)),0,1);
-
-    vec3 albdeo =  vec3(1,1,1);
-    vec3 ambiante = albdeo * u_AmbianteColor;
-    vec3 diffuse = albdeo * u_DiffuseColor*NdotL;   
-    diffuse = diffuse * (1.0-shadow);
-    diffuse = mix(diffuse,vec3(0.1,0.1,0.1)* vec3(NdotL * (1.0-shadow)),u_Metalness);
-    vec3 specularColor = mix(vec3(1), u_SpecularColor, u_Metalness);
-    float Shininess = (2.0 / (u_Roughness * u_Roughness)) - 2.0;
-    vec3 Specular = specularColor * ((Shininess+8.0)/8.0) * pow(NdotH,Shininess);
-   
-    //o_FragColor = vec4(H.xyz,1.0);
-
-    float VdotH = clamp(dot(V,H),0,1);
-
-    vec3 F0 = mix(vec3(0.16*u_Reflectance*u_Reflectance), ambiante, u_Metalness);
-
-    vec3 Fresnel = F0 + (1.0-F0) * (1.0 - pow(VdotH, 5.0));
-
-    vec3 Coefs = F0;
-    vec3 FresnelNL =1.0-F0 + (1.0-F0) * (1.0 - pow(NdotL, 5.0));
-
-    o_FragColor = vec4(ambiante+(diffuse*FresnelNL)+Fresnel*(Specular*Coefs),1);
+    vec3 R = reflect(V, normalize(v_Normal)); 
+    vec3 reflection = texture(skybox, -R).rgb;
    
 
-    //o_FragColor = color*diffuse;
+    vec3 ambiante = u_AmbianteColor;
+    vec3 diffuse = (1.0 - u_Metalness)*u_DiffuseColor*NdotL*(1.0 - shadow);
+    diffuse = mix(diffuse,diffuse*reflection,clamp(u_Reflectance*u_Reflectance,0,1));
+
+    vec3 SpecularColor = mix(vec3(1,1,1),u_SpecularColor,u_Metalness);
+    vec3 specular = SpecularColor * normalisation * pow(NdotH,Shininess);
+
+
+    vec3 F0 = mix(vec3(0.16 * u_Reflectance * u_Reflectance), vec3(ambiante), u_Metalness);
+    vec3 Fresnel = F0 + (1.0 - F0) * (1.0 - pow(NdotV, 5.0));
+    vec3 FresnelNL = 1.0 - F0 + (1.0 - F0) * (1.0 - pow(NdotL, 5.0));
+
+     vec3 Coefs = F0;
+    //o_FragColor = vec4(ambiante + diffuse + (specular) ,1.0);
+    if(u_Metalness>0){
+        ambiante= mix(ambiante,ambiante*reflection,clamp(u_Reflectance*u_Reflectance,0,1));
+    }
+    
+    o_FragColor = vec4(ambiante+ (diffuse*FresnelNL)+normalisation*(specular*Coefs) ,1.0);
+
+    //o_FragColor = vec4(texture(skybox,v_TexCoords),1.0);
 
     // debug des normales
     //o_FragColor = vec4(v_Normal * 0.5 + 0.5, 1.0);

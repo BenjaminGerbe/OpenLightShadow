@@ -14,8 +14,12 @@ struct Application
     GLShader m_FBOShader;
     GLShader m_SkyBox;
 
+    Mesh skybox;
+
     GLuint FBO;
-    float CameraAngle;
+    float CameraAngleX;
+    float CameraAngleY;
+    float Zoom;
 
     float* ColorSpecular;
     float* ColorDiffuse;

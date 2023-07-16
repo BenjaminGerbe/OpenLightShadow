@@ -12,8 +12,10 @@
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_opengl3.h"
-
+#include <vector>
 #include "stb_image.h"
+
+
 
 bool Application::initialize()
 {
@@ -34,6 +36,11 @@ bool Application::initialize()
     m_FBOShader.LoadFragmentShader("../../../../OpenLightShadow/shaders/RenderTexture.fs.glsl");
     m_FBOShader.Create();
 
+    m_SkyBox.LoadVertexShader("../../../../OpenLightShadow/shaders/Cube.vs.glsl");
+    m_SkyBox.LoadFragmentShader("../../../../OpenLightShadow/shaders/Cube.fs.glsl");
+    m_SkyBox.Create();
+
+
     {
         Mesh object;
         Mesh::ParseObj(&object, "data/lightning/lightning_obj.obj");
@@ -43,13 +50,20 @@ bool Application::initialize()
 
         Mesh::ParseObj(&object, "data/plane.obj");
         m_objects.push_back(object);
+        
+        Mesh::ParseObj(&skybox, "data/Cube.obj");
 
     }
+
+ 
+
 
     uint32_t program = m_opaqueShader.GetProgram();
     for (Mesh& obj : m_objects) {
         obj.Setup(program);
     }
+
+    skybox.Setup(m_SkyBox.GetProgram());
 
     // UBO
     glGenBuffers(1, &m_UBO);
@@ -118,8 +132,42 @@ bool Application::initialize()
 
     Metatlic = false;
 
-    CameraAngle = 0;
+    CameraAngleX = 0;
+    CameraAngleY = 20;
+    Zoom = 0;
     Reflectance = 0;
+
+
+    std::vector<std::string> faces
+    {
+            "data/skybox/right.jpg",
+            "data/skybox/left.jpg",
+            "data/skybox/top.jpg",
+            "data/skybox/bottom.jpg",
+            "data/skybox/front.jpg",
+            "data/skybox/back.jpg"
+    };
+
+
+    glGenTextures(1, &skyboxID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxID);
+
+    int width, height, nrChannels;
+    unsigned char* data;
+    for (unsigned int i = 0; i < faces.size(); i++)
+    {
+        data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
+        glTexImage2D(
+            GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+            0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data
+        );
+    }
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
 
     return true;
@@ -145,7 +193,9 @@ void Application::update() {
 
     ImGui::Begin("View");
 
-    ImGui::SliderFloat("Camera Angle", &CameraAngle, -180.0f, 180.0f);
+    ImGui::SliderFloat("Camera Angle X", &CameraAngleX, -180.0f, 180.0f);
+    ImGui::SliderFloat("Camera Angle Y ", &CameraAngleY, -180.0f, 180.0f);
+    ImGui::SliderFloat("Zoom ", &Zoom, -1.0f, 1.0f);
     ImGui::End();
 
     ImGui::Begin("Material");
@@ -163,20 +213,25 @@ void Application::update() {
 
 void Application::renderScene()
 {
-
-
-    glm::vec3 cameraPosition = glm::vec3({ 0.f, 1.f, 25.f });
-
+    glm::vec3 cameraPosition = glm::vec3({ 0.f, 1, 25+ (Zoom*25.0f) });
     glm::vec3 light_position = { 10.f, 20.f, 30 };
+    glm::vec3 up{ 0.0f, 1.f, 0.f };
+
+    glm::mat4 cameraView = glm::translate(glm::mat4(1.f), -cameraPosition);
+    cameraView *= glm::rotate(glm::mat4(1.0f), CameraAngleY * (glm::pi<float>() / 180.0f), glm::vec3(1.0f, 0.0, 0.0));
+    cameraView *= glm::rotate(glm::mat4(1.0f), CameraAngleX * (glm::pi<float>() / 180.0f), up);
+   
 
     uint32_t program = m_FBOShader.GetProgram();
     glUseProgram(program);
 
     {
-        glm::vec3 up{ 0.0f, 1.f, 0.f };
+        glViewport(0, 0, m_width, m_height);
+        glClearColor(0,0,0, 1.f);
+        // comme on va afficher de la 3D on efface le depth buffer
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
        
         glm::mat4 matrices[2];
-        glm::mat4 lightMatrices[2];
 
         matrices[0] = glm::lookAt(light_position,glm::vec3(0,0,0), glm::vec3(0,1,0));
         matrices[1] = glm::ortho<float>(-35, 35, -35, 35, .01f, 75.0f);
@@ -189,8 +244,49 @@ void Application::renderScene()
 
 
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-
     render( program);
+
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    
+    glViewport(0, 0, m_width, m_height);
+    glClearColor(0.973f, 0.514f, 0.475f, 1.f);
+    // comme on va afficher de la 3D on efface le depth buffer
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    //skybox
+    {
+        glDepthFunc(GL_LEQUAL);
+        glDepthMask(GL_FALSE);
+
+        uint32_t program = m_SkyBox.GetProgram();
+        glUseProgram(program);
+
+        glm::mat4 matrices[2];
+        
+        matrices[0] =  glm::mat4(glm::mat3(cameraView)); ;
+
+        matrices[1] = glm::perspectiveFov(glm::radians(45.0f), (float)m_width, (float)m_height, 0.1f, 1000.0f);
+
+        glBindBuffer(GL_UNIFORM_BUFFER, m_UBO);
+        glBufferData(GL_UNIFORM_BUFFER, sizeof(glm::mat4) * 2, matrices, GL_STATIC_DRAW);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxID);
+        glUniform1i(glGetUniformLocation(program, "Skybox"), 0);
+
+        for (auto& submesh : skybox.meshes)
+        {
+            glBindVertexArray(submesh.VAO);
+            glDrawElements(GL_TRIANGLES, submesh.indicesCount, GL_UNSIGNED_INT, 0);
+        }
+
+        glDepthMask(GL_TRUE);
+        glDepthFunc(GL_LESS);
+    }
+
+
+
     glCullFace(GL_FRONT);
     
     program = m_opaqueShader.GetProgram();
@@ -201,9 +297,7 @@ void Application::renderScene()
         glm::mat4 matrices[2];
         glm::mat4 lightMatrices[2];
 
-        matrices[0] = glm::translate(glm::mat4(1.f), -cameraPosition);
-        matrices[0] *= glm::rotate(glm::mat4(1.0f), 20.0f * (glm::pi<float>() / 180.0f), glm::vec3(1.0f, 0.0, 0.0));
-        matrices[0] *= glm::rotate(glm::mat4(1.0f), CameraAngle*(glm::pi<float>()/180.0f), up);
+        matrices[0] = cameraView;
 
         matrices[1] = glm::perspectiveFov(glm::radians(45.f), (float)m_width, (float)m_height, 0.1f, 1000.f);
 
@@ -238,21 +332,24 @@ void Application::renderScene()
         int32_t MetalnessLocation = glGetUniformLocation(program, "u_Metalness");
         glUniform1i(MetalnessLocation, Metatlic);
 
+        glActiveTexture(GL_TEXTURE0+4);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxID);
+        glUniform1i(glGetUniformLocation(program, "Skybox"), 4);
     }
 
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glCullFace(GL_BACK);
     render(program);
+
+
+
 }
 
 void Application::render( uint32_t program)
 {
    
-    glViewport(0, 0, m_width, m_height);
-    glClearColor(0.973f, 0.514f, 0.475f, 1.f);
+ 
 
-    // comme on va afficher de la 3D on efface le depth buffer
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  
     // backface culling et activation du z-buffer
     glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
@@ -274,7 +371,7 @@ void Application::render( uint32_t program)
 
     uint32_t WM = glGetUniformLocation(program, "u_WorldMatrix");
     glUniformMatrix4fv(WM, 1, false, glm::value_ptr(worldMatrix));
-
+    int idx = 0;
     for (auto& obj : m_objects)
     {
         for (auto& submesh : obj.meshes)
@@ -284,11 +381,29 @@ void Application::render( uint32_t program)
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, mat.diffuseTexture);
 
+
+            if (idx == 2) {
+
+                uint32_t colorAmbiante = glGetUniformLocation(program, "u_AmbianteColor");
+                glUniform3fv(colorAmbiante, 1, new float[3]{.25,.5,.34});
+
+                uint32_t colorDiffuse = glGetUniformLocation(program, "u_DiffuseColor");
+                glUniform3fv(colorDiffuse, 1, new float[3] {.5, .5, .5});
+
+                uint32_t colorSpecular = glGetUniformLocation(program, "u_SpecularColor");
+                glUniform3fv(colorSpecular, 1, new float[3] {1.0f, 1.0f, 1.0f});
+
+
+                int32_t MetalnessLocation = glGetUniformLocation(program, "u_Metalness");
+                glUniform1i(MetalnessLocation, 0);
+            }
+            
+
             // bind implicitement les VBO et IBO rattaches, ainsi que les definitions d'attributs
             glBindVertexArray(submesh.VAO);
             // dessine les triangles
             glDrawElements(GL_TRIANGLES, submesh.indicesCount, GL_UNSIGNED_INT, 0);
-
+            idx++;
         }
     }
 }

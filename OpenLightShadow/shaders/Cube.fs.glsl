@@ -13,5 +13,6 @@ uniform Matrices {
 
 void main()
 {    
-    FragColor = texture(skybox, TexCoords);
+    vec4 texColor = texture(skybox, TexCoords);
+	FragColor = texColor;
 }

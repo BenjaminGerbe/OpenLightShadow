@@ -28,6 +28,8 @@ uniform LightMatrices {
 out vec4 v_ShadowCoords;
 out vec4 vertPosition;
 
+uniform samplerCube skybox;
+
 void main(void)
 {
 	v_TexCoords = a_TexCoords;
@@ -55,7 +57,7 @@ void main(void)
 				, 0.5, 0.5, 0.5, 1.0 // 4eme colonne (+0.5)
 	);
 
-
+	
 
 	//v_ShadowCoords = biasMatrix * light_ndc_position;
 	v_ShadowCoords = biasMatrix*light_ndc_position;
