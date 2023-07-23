@@ -15,4 +15,5 @@ void main()
 {    
     vec4 texColor = texture(skybox, TexCoords);
 	FragColor = texColor;
+
 }

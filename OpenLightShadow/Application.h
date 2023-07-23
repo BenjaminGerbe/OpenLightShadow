@@ -24,6 +24,7 @@ struct Application
     float* ColorSpecular;
     float* ColorDiffuse;
     float* ColorAmbiante;
+    float* ColorLight;
     float Roughness;
     bool Metatlic;
     float Reflectance;

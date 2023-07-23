@@ -21,6 +21,7 @@ uniform vec3 u_AmbianteColor;
 uniform float u_Roughness;
 uniform int u_Metalness;
 uniform float u_Reflectance;
+uniform vec3 u_LightColor;
 
 uniform mat4 u_WorldMatrix;
 uniform vec3 u_lightDirection;
@@ -77,7 +78,7 @@ void main(void)
 
     
     float bias = 0.005*tan(acos(NdotL));
-    bias = clamp(bias, 0,0.01);
+    bias = clamp(bias, 0f,0.01f);
  
     float currentDepth = projectorTexCoords.z;
 
@@ -91,7 +92,7 @@ void main(void)
 
 
 
-    float Roughness = clamp(u_Roughness,0.001,1);
+    float Roughness = clamp(u_Roughness,0.001f,1f);
     Roughness = Roughness*Roughness;
     float Shininess = 2.0 / (Roughness * Roughness)-2.0;
     float normalisation = ((Shininess + 8.0) / 8.0);
@@ -123,7 +124,7 @@ void main(void)
         ambiante= mix(ambiante,ambiante*reflection,clamp(u_Reflectance*u_Reflectance,0,1));
     }
     
-    o_FragColor = vec4(ambiante+ (diffuse*FresnelNL)+normalisation*(specular*Coefs) ,1.0);
+    o_FragColor = vec4(ambiante+ (diffuse*FresnelNL)+normalisation*(specular*Coefs) ,1.0)*vec4(u_LightColor,1.0);
 
     //o_FragColor = vec4(texture(skybox,v_TexCoords),1.0);
 

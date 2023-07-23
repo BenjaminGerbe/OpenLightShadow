@@ -43,8 +43,6 @@ bool Application::initialize()
 
     {
         Mesh object;
-        Mesh::ParseObj(&object, "data/lightning/lightning_obj.obj");
-
         Mesh::ParseObj(&object, "data/Chess_Knights.obj");
         m_objects.push_back(object);
 
@@ -52,10 +50,7 @@ bool Application::initialize()
         m_objects.push_back(object);
         
         Mesh::ParseObj(&skybox, "data/Cube.obj");
-
     }
-
- 
 
 
     uint32_t program = m_opaqueShader.GetProgram();
@@ -128,6 +123,7 @@ bool Application::initialize()
     ColorSpecular = new float[3] {0, 0, 0};
     ColorAmbiante = new float[3] {0, 0, 0};
     ColorDiffuse = new float[3] {0, 0, 0};
+    ColorLight = new float[3] {1, 1, 1};
     Roughness = .5;
 
     Metatlic = false;
@@ -184,6 +180,7 @@ void Application::deinitialize()
     delete[] ColorSpecular;
     delete[] ColorAmbiante;
     delete[] ColorDiffuse;
+    delete[] ColorLight;
 
     Texture::PurgeTextures();
 }
@@ -203,6 +200,7 @@ void Application::update() {
     ImGui::ColorEdit4("Color Ambiante", ColorAmbiante, ImGuiColorEditFlags_NoInputs);
     ImGui::ColorEdit4("Color Diffuse", ColorDiffuse, ImGuiColorEditFlags_NoInputs);
     ImGui::ColorEdit4("Color Specular", ColorSpecular, ImGuiColorEditFlags_NoInputs);
+    ImGui::ColorEdit4("Light Color", ColorLight, ImGuiColorEditFlags_NoInputs);
     ImGui::SliderFloat("Roughness", &Roughness, 0.0f, 1.0f);
     ImGui::SliderFloat("Reflectance", &Reflectance, 0.0f, 1.0f);
 
@@ -321,6 +319,9 @@ void Application::renderScene()
         
         uint32_t colorDiffuse = glGetUniformLocation(program, "u_DiffuseColor");
         glUniform3fv(colorDiffuse, 1, ColorDiffuse);
+
+        uint32_t colorLightLocation = glGetUniformLocation(program, "u_LightColor");
+        glUniform3fv(colorLightLocation, 1, ColorLight);
         
         int32_t RoughnessLocation = glGetUniformLocation(program, "u_Roughness");
         glUniform1f(RoughnessLocation, Roughness);
